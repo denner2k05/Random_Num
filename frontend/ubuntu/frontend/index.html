@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jogo de Adivinhação | Início</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Jogo de Adivinhação</h1>
+            <nav>
+                <ul>
+                    <li><a href="index.html" class="active">Início</a></li>
+                    <li><a href="login.html">Entrar</a></li>
+                    <li><a href="register.html">Cadastrar</a></li>
+                </ul>
+            </nav>
+        </header>
+
+        <main class="landing-page">
+            <section class="hero">
+                <div class="hero-content">
+                    <h2>Teste sua sorte e ganhe!</h2>
+                    <p>Adivinhe o número correto e multiplique suas apostas.</p>
+                    <div class="cta-buttons">
+                        <a href="register.html" class="btn btn-primary">Começar a jogar</a>
+                        <a href="#how-to-play" class="btn btn-secondary">Como jogar</a>
+                    </div>
+                </div>
+                <div class="hero-image">
+                    <div class="number-animation">
+                        <span>?</span>
+                    </div>
+                </div>
+            </section>
+
+            <section id="how-to-play" class="how-to-play">
+                <h2>Como Jogar</h2>
+                <div class="steps">
+                    <div class="step">
+                        <div class="step-icon">
+                            <i class="fas fa-user-plus"></i>
+                        </div>
+                        <h3>1. Crie sua conta</h3>
+                        <p>Registre-se gratuitamente para começar a jogar.</p>
+                    </div>
+                    <div class="step">
+                        <div class="step-icon">
+                            <i class="fas fa-coins"></i>
+                        </div>
+                        <h3>2. Faça um depósito</h3>
+                        <p>Adicione saldo à sua conta para fazer apostas.</p>
+                    </div>
+                    <div class="step">
+                        <div class="step-icon">
+                            <i class="fas fa-dice"></i>
+                        </div>
+                        <h3>3. Escolha sua faixa</h3>
+                        <p>Selecione entre 1-10, 1-50, 1-100 ou 1-300.</p>
+                    </div>
+                    <div class="step">
+                        <div class="step-icon">
+                            <i class="fas fa-trophy"></i>
+                        </div>
+                        <h3>4. Ganhe prêmios</h3>
+                        <p>Acerte o número e multiplique sua aposta!</p>
+                    </div>
+                </div>
+            </section>
+
+            <section class="multipliers">
+                <h2>Multiplicadores</h2>
+                <div class="multiplier-cards">
+                    <div class="multiplier-card">
+                        <h3>1-10</h3>
+                        <div class="multiplier">1.2x</div>
+                        <p>3 chances</p>
+                    </div>
+                    <div class="multiplier-card">
+                        <h3>1-50</h3>
+                        <div class="multiplier">2x</div>
+                        <p>6 chances</p>
+                    </div>
+                    <div class="multiplier-card">
+                        <h3>1-100</h3>
+                        <div class="multiplier">2.5x</div>
+                        <p>7 chances</p>
+                    </div>
+                    <div class="multiplier-card">
+                        <h3>1-300</h3>
+                        <div class="multiplier">5x</div>
+                        <p>7 chances</p>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <footer>
+            <p>&copy; 2025 Jogo de Adivinhação. Todos os direitos reservados.</p>
+        </footer>
+    </div>
+
+   <script>
+    window.mercadoPagoConfig = {
+        publicKey: 'TEST-c79e0212-c0fa-44ec-ae51-c538805df9a4'
+    };
+    console.log('Configuração MercadoPago:', window.mercadoPagoConfig);
+</script>
+<script src="js/mercado-pago.js"></script>
+    <script src="js/profile.js"></script>
+
+    <script src="js/main.js"></script>
+</body>
+</html>
+

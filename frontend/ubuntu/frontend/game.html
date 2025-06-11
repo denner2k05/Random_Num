@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jogo de Adivinhação | Jogar</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Jogo de Adivinhação</h1>
+            <nav>
+                <ul>
+                    <li><a href="game.html" class="active">Jogar</a></li>
+                    <li><a href="profile.html">Perfil</a></li>
+                    <li><a href="#" id="logout-btn">Sair</a></li>
+                </ul>
+            </nav>
+            <div class="user-balance">
+                <span>Saldo: </span>
+                <span id="user-balance">R$ 0,00</span>
+                <button class="btn btn-small" id="deposit-btn">Depositar</button>
+            </div>
+        </header>
+
+        <main class="game-page">
+            <section class="game-container">
+                <div class="game-header">
+                    <h2>Adivinhe o Número</h2>
+                    <p>Escolha uma faixa, digite um número e faça sua aposta!</p>
+                </div>
+                
+                <div class="game-options">
+                    <div class="range-selector">
+                        <h3>Escolha a Faixa</h3>
+                        <div class="range-buttons">
+                            <button class="range-btn" data-range="10" data-multiplier="1.2" data-chances="3">1-10 (1.2x)</button>
+                            <button class="range-btn" data-range="50" data-multiplier="2" data-chances="6">1-50 (2x)</button>
+                            <button class="range-btn" data-range="100" data-multiplier="2.5" data-chances="7">1-100 (2.5x)</button>
+                            <button class="range-btn" data-range="300" data-multiplier="5" data-chances="7">1-300 (5x)</button>
+                        </div>
+                    </div>
+                    
+                    <div class="number-input">
+                        <h3>Escolha seu Número</h3>
+                        <input type="number" id="guess-number" min="1" max="10" placeholder="Digite um número">
+                        <p id="range-info">Faixa atual: 1-10</p>
+                        <p id="chances-info">Chances restantes: 3</p>
+                    </div>
+                    
+                    <div class="bet-input">
+                        <h3>Valor da Aposta</h3>
+                        <div class="bet-amount-container">
+                            <span class="currency">R$</span>
+                            <input type="number" id="bet-amount" min="1" step="1" placeholder="Valor">
+                        </div>
+                        <div class="quick-bet-buttons">
+                            <button class="quick-bet-btn" data-amount="5">R$ 5</button>
+                            <button class="quick-bet-btn" data-amount="10">R$ 10</button>
+                            <button class="quick-bet-btn" data-amount="20">R$ 20</button>
+                            <button class="quick-bet-btn" data-amount="50">R$ 50</button>
+                        </div>
+                    </div>
+                </div>
+                
+                <button id="place-bet-btn" class="btn btn-primary btn-large">Apostar</button>
+                
+                <div class="game-result" id="game-result">
+                    <!-- Resultados serão exibidos aqui via JavaScript -->
+                </div>
+                
+                <div class="game-hint" id="game-hint">
+                    <!-- Dicas serão exibidas aqui via JavaScript -->
+                </div>
+            </section>
+            
+            <section class="recent-bets">
+                <h3>Apostas Recentes</h3>
+                <div class="bets-table-container">
+                    <table class="bets-table">
+                        <thead>
+                            <tr>
+                                <th>Hora</th>
+                                <th>Faixa</th>
+                                <th>Seu Número</th>
+                                <th>Número Sorteado</th>
+                                <th>Aposta</th>
+                                <th>Resultado</th>
+                            </tr>
+                        </thead>
+                        <tbody id="recent-bets-body">
+                            <!-- Dados serão inseridos via JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        </main>
+
+        <!-- Modal de Depósito -->
+        <div class="modal" id="deposit-modal">
+            <div class="modal-content">
+                <span class="close-modal">&times;</span>
+                <h2>Depositar Saldo</h2>
+                <form id="deposit-form">
+                    <div class="form-group">
+                        <label for="deposit-amount">Valor (R$)</label>
+                        <input type="number" id="deposit-amount" min="10" step="5" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Método de Pagamento</label>
+                        <div class="payment-methods">
+                            <div class="payment-method">
+                                <input type="radio" id="pix" name="payment-method" value="pix" checked>
+                                <label for="pix">PIX</label>
+                            </div>
+                            <div class="payment-method">
+                                <input type="radio" id="credit-card" name="payment-method" value="credit-card">
+                                <label for="credit-card">Cartão de Crédito</label>
+                            </div>
+                            <div class="payment-method">
+                                <input type="radio" id="mercado-pago" name="payment-method" value="mercado-pago">
+                                <label for="mercado-pago">Mercado Pago</label>
+                            </div>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-block">Confirmar Depósito</button>
+                </form>
+            </div>
+        </div>
+
+        <footer>
+            <p>&copy; 2025 Jogo de Adivinhação. Todos os direitos reservados.</p>
+        </footer>
+    </div>
+    <script>
+    window.mercadoPagoConfig = {
+        publicKey: 'TEST-c79e0212-c0fa-44ec-ae51-c538805df9a4'
+    };
+    console.log('MercadoPagoConfig:', window.mercadoPagoConfig);
+</script>
+<script src="js/mercado-pago.js"></script>
+<script src="js/game.js"></script>
+
+    <script src="js/supabase-config.js"></script>
+    <script src="js/auth.js"></script>
+</body>
+</html>
+
