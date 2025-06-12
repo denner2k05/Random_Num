@@ -5,6 +5,10 @@ const express = require('express');
 const cors = require('cors');
 const mercadopago = require('mercadopago');
 const nodemailer = require('nodemailer');
+const { createClient } = require('@supabase/supabase-js');
+
+// === SUPABASE CLIENT ===
+const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
 
 // Captura erros globais para debug de promessas não tratadas
 process.on('unhandledRejection', (reason, promise) => {
@@ -66,39 +70,92 @@ const transporter = nodemailer.createTransport({
 // === [ROTA DE SAQUE] ===
 app.post('/api/solicitar-saque', async (req, res) => {
   console.log('🟢 Recebido POST em /api/solicitar-saque!!!');
-  const { valor, metodo, pixKeyType, pixKey, bankName, accountNumber, branchNumber, usuario } = req.body;
+  const { valor, metodo, pixKeyType, pixKey, bankName, accountNumber, branchNumber, usuario, user_id } = req.body;
 
-  let saqueInfo = `<b>Solicitação de saque recebida:</b><br>`;
-  saqueInfo += `<b>Usuário:</b> ${usuario || 'Desconhecido'}<br>`;
-  saqueInfo += `<b>Valor:</b> R$ ${Number(valor).toFixed(2)}<br>`;
-  saqueInfo += `<b>Método:</b> ${metodo}<br>`;
-  if (metodo === 'pix') {
-    saqueInfo += `<b>Tipo de chave PIX:</b> ${pixKeyType || ''}<br>`;
-    saqueInfo += `<b>Chave PIX:</b> ${pixKey || ''}<br>`;
-  }
-  if (metodo === 'bank-transfer') {
-    saqueInfo += `<b>Banco:</b> ${bankName || ''}<br>`;
-    saqueInfo += `<b>Conta:</b> ${accountNumber || ''}<br>`;
-    saqueInfo += `<b>Agência:</b> ${branchNumber || ''}<br>`;
+  console.log('user_id recebido:', user_id, '| valor:', valor);
+
+  if (!user_id || typeof valor !== 'number' || valor <= 0) {
+    return res.status(400).json({ error: 'Dados inválidos para saque.' });
   }
 
   try {
-    console.log('[DEBUG] Enviando e-mail de saque...');
+    // 1. Buscar o saldo atual do usuário
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('balance')
+      .eq('id', user_id)
+      .single();
+
+    console.log('profile retornado do Supabase:', profile);
+    console.log('profileError:', profileError);
+
+    if (profileError || !profile) {
+      return res.status(404).json({ error: 'Usuário não encontrado.' });
+    }
+
+    const saldoAtual = parseFloat(profile.balance);
+    if (saldoAtual < valor) {
+      return res.status(400).json({ error: 'Saldo insuficiente para saque.' });
+    }
+
+    // 2. Descontar o valor do saldo
+    const novoSaldo = saldoAtual - valor;
+    console.log('Descontando valor. Saldo atual:', saldoAtual, '| Valor:', valor, '| Novo saldo:', novoSaldo);
+
+    const { error: updateError } = await supabase
+      .from('profiles')
+      .update({ balance: novoSaldo })
+      .eq('id', user_id);
+
+    console.log('updateError:', updateError);
+
+    if (updateError) {
+      return res.status(500).json({ error: 'Erro ao atualizar saldo.' });
+    }
+
+    // 3. Registrar transação de saque
+    await supabase
+      .from('transactions')
+      .insert([{
+        user_id: user_id,
+        type: 'withdrawal',
+        amount: valor,
+        payment_method: metodo,
+        status: 'pending'
+      }]);
+
+    // 4. Enviar e-mail (mantém seu código atual)
+    let saqueInfo = `<b>Solicitação de saque recebida:</b><br>`;
+    saqueInfo += `<b>Usuário:</b> ${usuario || 'Desconhecido'}<br>`;
+    saqueInfo += `<b>Valor:</b> R$ ${Number(valor).toFixed(2)}<br>`;
+    saqueInfo += `<b>Método:</b> ${metodo}<br>`;
+    if (metodo === 'pix') {
+      saqueInfo += `<b>Tipo de chave PIX:</b> ${pixKeyType || ''}<br>`;
+      saqueInfo += `<b>Chave PIX:</b> ${pixKey || ''}<br>`;
+    }
+    if (metodo === 'bank-transfer') {
+      saqueInfo += `<b>Banco:</b> ${bankName || ''}<br>`;
+      saqueInfo += `<b>Conta:</b> ${accountNumber || ''}<br>`;
+      saqueInfo += `<b>Agência:</b> ${branchNumber || ''}<br>`;
+    }
+
     await transporter.sendMail({
       from: process.env.MAIL_USER,
       to: 'maiconsantoslnum@gmail.com',
       subject: 'Nova solicitação de saque',
       html: saqueInfo
     });
-    console.log('[DEBUG] E-mail enviado com sucesso!');
-    res.status(200).json({ success: true, message: 'Solicitação de saque enviada por e-mail!' });
+
+    res.status(200).json({ success: true, message: 'Solicitação de saque enviada e saldo descontado!' });
+
   } catch (err) {
-    console.error('❌ Erro ao enviar e-mail de saque:', err); // Agora loga o erro detalhado!
-    res.status(500).json({ success: false, error: 'Erro ao enviar e-mail de saque.' });
+    console.error('❌ Erro no saque:', err);
+    res.status(500).json({ success: false, error: 'Erro ao processar o saque.' });
   }
 });
 
-const PORT = process.env.PORT || 3000;
+// === [START SERVER - Porta dinâmica para Railway] ===
+const PORT = process.env.PORT || 8080; // Usa 8080 local, mas Railway define PORT em produção
 app.listen(PORT, () => {
   console.log(`Backend correto rodando!`);
   console.log(`API rodando em http://localhost:${PORT}`);

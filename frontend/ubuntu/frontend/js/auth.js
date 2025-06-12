@@ -1,16 +1,90 @@
 document.addEventListener('DOMContentLoaded', function() {
     const supabase = window.supabaseClient;
 
-    checkAuthState();
+    // --- FLUXO DE RECUPERAÇÃO DE SENHA (RESET) ---
+    // Adiciona o formulário de nova senha caso não exista (compatível com seu HTML atual)
+    function injectNewPasswordFormIfNeeded() {
+        if (!document.getElementById('new-password-form')) {
+            const authContainer = document.querySelector('.auth-container');
+            const form = document.createElement('form');
+            form.className = 'auth-form';
+            form.id = 'new-password-form';
+            form.style.display = 'none';
+            form.innerHTML = `
+                <div class="form-group">
+                    <label for="new-password">Nova Senha</label>
+                    <input type="password" id="new-password" name="new-password" required minlength="6">
+                </div>
+                <button type="submit" class="btn btn-primary btn-block">Redefinir Senha</button>
+            `;
+            if (authContainer) authContainer.appendChild(form);
+        }
+    }
+    injectNewPasswordFormIfNeeded();
+
+    // Função para mostrar/esconder formulários conforme o fluxo
+    function showForm(formId) {
+        const resetPasswordForm = document.getElementById('reset-password-form');
+        const newPasswordForm = document.getElementById('new-password-form');
+        if (resetPasswordForm) resetPasswordForm.style.display = 'none';
+        if (newPasswordForm) newPasswordForm.style.display = 'none';
+        const el = document.getElementById(formId);
+        if (el) el.style.display = 'block';
+    }
+
+    // --- Detecta se é pelo link de recovery do Supabase ---
+    const hashParams = new URLSearchParams(window.location.hash.replace('#', ''));
+    if (hashParams.get('type') === 'recovery') {
+        showForm('new-password-form');
+    } else {
+        showForm('reset-password-form');
+    }
+
+    // --- Envio do e-mail de recuperação ---
+    const resetPasswordForm = document.getElementById('reset-password-form');
+    if (resetPasswordForm) {
+        resetPasswordForm.addEventListener('submit', async function (e) {
+            e.preventDefault();
+            const email = document.getElementById('email').value;
+            try {
+                const { error } = await supabase.auth.resetPasswordForEmail(email, {
+                    redirectTo: window.location.origin + '/reset-password.html'
+                });
+                if (error) throw error;
+                alert('E-mail de recuperação enviado! Verifique sua caixa de entrada.');
+            } catch (error) {
+                alert('Erro na recuperação de senha: ' + error.message);
+            }
+        });
+    }
+
+    // --- Redefinição de senha com token recovery ---
+    const newPasswordForm = document.getElementById('new-password-form');
+    if (newPasswordForm) {
+        newPasswordForm.addEventListener('submit', async function (e) {
+            e.preventDefault();
+            const newPassword = document.getElementById('new-password').value;
+            try {
+                const { error } = await supabase.auth.updateUser({ password: newPassword });
+                if (error) throw error;
+                alert('Senha redefinida com sucesso! Faça login novamente.');
+                window.location.href = 'login.html';
+            } catch (error) {
+                alert('Erro ao redefinir senha: ' + error.message);
+            }
+        });
+    }
+
+
+    // --- MANTÉM O RESTANTE DO FLUXO CASO USE ESTE ARQUIVO EM OUTRAS PÁGINAS ---
+    // (login, registro, logout, etc - só executa se existir os formulários correspondentes)
 
     const loginForm = document.getElementById('login-form');
     const registerForm = document.getElementById('register-form');
-    const resetPasswordForm = document.getElementById('reset-password-form');
     const logoutBtn = document.getElementById('logout-btn');
 
     if (loginForm) loginForm.addEventListener('submit', handleLogin);
     if (registerForm) registerForm.addEventListener('submit', handleRegister);
-    if (resetPasswordForm) resetPasswordForm.addEventListener('submit', handleResetPassword);
     if (logoutBtn) logoutBtn.addEventListener('click', handleLogout);
 
     async function checkAuthState() {
@@ -41,6 +115,14 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function handleUnauthenticatedUser() {
         const currentPage = window.location.pathname.split('/').pop();
+
+        // Se acabou de deslogar, não mostrar alert
+        if (localStorage.getItem('logout')) {
+            localStorage.removeItem('logout');
+            window.location.href = 'login.html';
+            return;
+        }
+
         if (["game.html", "profile.html"].includes(currentPage)) {
             alert('Você precisa fazer login para acessar esta página.');
             window.location.href = 'login.html';
@@ -147,24 +229,11 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    async function handleResetPassword(e) {
-        e.preventDefault();
-        const email = document.getElementById('email').value;
-        try {
-            const { error } = await supabase.auth.resetPasswordForEmail(email, {
-                redirectTo: window.location.origin + '/reset-password.html'
-            });
-            if (error) throw error;
-            alert('E-mail de recuperação enviado! Verifique sua caixa de entrada.');
-        } catch (error) {
-            console.error('Erro na recuperação de senha:', error);
-            alert('Erro na recuperação de senha: ' + error.message);
-        }
-    }
-
     async function handleLogout(e) {
         e.preventDefault();
         try {
+            // Marca que foi logout manual
+            localStorage.setItem('logout', '1');
             const { error } = await supabase.auth.signOut();
             if (error) throw error;
             alert('Logout realizado com sucesso!');
@@ -175,12 +244,17 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    supabase.auth.onAuthStateChange((event, session) => {
-        console.log('Auth state changed:', event, session);
-        if (event === 'SIGNED_IN' && session && session.user) {
-            handleAuthenticatedUser(session.user);
-        } else if (event === 'SIGNED_OUT') {
-            handleUnauthenticatedUser();
-        }
-    });
+    // Assegura que o checkAuthState só rode se não estiver no fluxo de recovery
+    if (!hashParams.get('type')) {
+        checkAuthState();
+
+        supabase.auth.onAuthStateChange((event, session) => {
+            console.log('Auth state changed:', event, session);
+            if (event === 'SIGNED_IN' && session && session.user) {
+                handleAuthenticatedUser(session.user);
+            } else if (event === 'SIGNED_OUT') {
+                handleUnauthenticatedUser();
+            }
+        });
+    }
 });

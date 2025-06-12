@@ -343,24 +343,33 @@ document.getElementById('withdrawal-form').addEventListener('submit', async func
         saqueData = { ...saqueData, bankName, accountNumber, branchNumber };
     }
 
-    // Envia solicitação de saque para o backend (que envia o e-mail)
+    // ==== CORREÇÃO AQUI ====
+    // Pegue o user_id e envie para o backend!
+    const userId = await getUserId();
+    if (!userId) {
+        alert("Usuário não autenticado.");
+        return;
+    }
+
     fetch('http://localhost:3000/api/solicitar-saque', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
             ...saqueData,
-            usuario: userEmailElem ? userEmailElem.textContent : 'desconhecido'
+            usuario: userEmailElem ? userEmailElem.textContent : 'desconhecido',
+            user_id: userId // <-- ESSENCIAL!
         })
     })
     .then(async response => {
         const data = await response.json();
         if (data.success) {
             alert('Solicitação de saque enviada!');
+            mostrarSaldoSaque();
+            carregarHistoricoSaques();
+            await loadUserProfile(userId); // Atualiza saldo na tela
         } else {
-            alert('Erro ao enviar solicitação de saque por e-mail.');
+            alert(data.error || 'Erro ao enviar solicitação de saque por e-mail.');
         }
-        mostrarSaldoSaque();
-        carregarHistoricoSaques();
     })
     .catch(() => {
         alert('Erro ao enviar solicitação de saque.');
