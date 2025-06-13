@@ -22,7 +22,7 @@ const app = express();
 
 // === CORS CORRIGIDO ===
 app.use(cors({
-  origin: 'https://numero-randomico.netlify.app/', // ALTERA para o domínio real do seu front
+  origin: 'https://numero-randomico.netlify.app', // ALTERA para o domínio real do seu front
   methods: ['GET', 'POST', 'OPTIONS'],
   credentials: true
 }));
