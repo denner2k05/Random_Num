@@ -1,5 +1,8 @@
 // Sistema de pagamentos com Mercado Pago + integração Pix via API Node/Express
 
+// Troque aqui pela URL do seu backend no Render!
+const BACKEND_URL = 'https://random-num.onrender.com';
+
 class MercadoPagoPayments {
     constructor() {
         this.mp = null;
@@ -43,7 +46,7 @@ class MercadoPagoPayments {
     // Criar preferência de pagamento (para checkout padrão)
     async createPaymentPreference(amount, description = 'Depósito no Jogo de Adivinhação') {
         try {
-            const response = await fetch('http://localhost:3000/api/create-payment-preference', {
+            const response = await fetch(`${BACKEND_URL}/api/create-payment-preference`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -68,7 +71,7 @@ class MercadoPagoPayments {
     // Pagamento Pix direto via API Node/Express
     async processPixPayment(amount, email) {
         try {
-            const response = await fetch('http://localhost:3000/pagamento', {
+            const response = await fetch(`${BACKEND_URL}/pagamento`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -164,7 +167,7 @@ class MercadoPagoPayments {
         }
         try {
             const token = await this.mp.createCardToken(cardData);
-            const response = await fetch('/api/process-card-payment', {
+            const response = await fetch(`${BACKEND_URL}/api/process-card-payment`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

@@ -20,10 +20,16 @@ process.on('uncaughtException', (err) => {
 
 const app = express();
 
-app.use(cors());
+// === CORS CORRIGIDO ===
+app.use(cors({
+  origin: 'https://random-num-teste.netlify.app/', // ALTERA para o domínio real do seu front
+  methods: ['GET', 'POST', 'OPTIONS'],
+  credentials: true
+}));
+
 app.use(express.json());
 
-// LOG das variáveis de ambiente para debug
+// DEBUG vars de ambiente
 console.log('[DEBUG] MAIL_USER:', process.env.MAIL_USER);
 console.log('[DEBUG] MAIL_PASS:', process.env.MAIL_PASS ? '****' : 'NÃO DEFINIDA');
 
@@ -40,6 +46,7 @@ app.post('/api/create-payment-preference', async (req, res) => {
     if (!amount) {
       return res.status(400).json({ error: 'amount obrigatório' });
     }
+
     const preferenceData = {
       items: [
         {
@@ -50,6 +57,7 @@ app.post('/api/create-payment-preference', async (req, res) => {
       ],
       external_reference: user_id,
     };
+
     const result = await preference.create({ body: preferenceData });
     res.json({ preference_id: result.id });
   } catch (error) {
@@ -79,7 +87,7 @@ app.post('/api/solicitar-saque', async (req, res) => {
   }
 
   try {
-    // 1. Buscar o saldo atual do usuário
+    // 1. Buscar saldo atual
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
       .select('balance')
@@ -98,7 +106,7 @@ app.post('/api/solicitar-saque', async (req, res) => {
       return res.status(400).json({ error: 'Saldo insuficiente para saque.' });
     }
 
-    // 2. Descontar o valor do saldo
+    // 2. Descontar valor
     const novoSaldo = saldoAtual - valor;
     console.log('Descontando valor. Saldo atual:', saldoAtual, '| Valor:', valor, '| Novo saldo:', novoSaldo);
 
@@ -113,7 +121,7 @@ app.post('/api/solicitar-saque', async (req, res) => {
       return res.status(500).json({ error: 'Erro ao atualizar saldo.' });
     }
 
-    // 3. Registrar transação de saque
+    // 3. Registrar transação
     await supabase
       .from('transactions')
       .insert([{
@@ -124,7 +132,7 @@ app.post('/api/solicitar-saque', async (req, res) => {
         status: 'pending'
       }]);
 
-    // 4. Enviar e-mail (mantém seu código atual)
+    // 4. Enviar e-mail
     let saqueInfo = `<b>Solicitação de saque recebida:</b><br>`;
     saqueInfo += `<b>Usuário:</b> ${usuario || 'Desconhecido'}<br>`;
     saqueInfo += `<b>Valor:</b> R$ ${Number(valor).toFixed(2)}<br>`;
@@ -155,7 +163,7 @@ app.post('/api/solicitar-saque', async (req, res) => {
 });
 
 // === [START SERVER - Porta dinâmica para Railway] ===
-const PORT = process.env.PORT || 8080; // Usa 8080 local, mas Railway define PORT em produção
+const PORT = process.env.PORT || 8080;
 app.listen(PORT, () => {
   console.log(`Backend correto rodando!`);
   console.log(`API rodando em http://localhost:${PORT}`);
