@@ -39,7 +39,7 @@ const client = new mercadopago.MercadoPagoConfig({
 });
 const preference = new mercadopago.Preference(client);
 
-// === [ROTA DE PAGAMENTO] ===
+// === [ROTA DE PAGAMENTO - CHECKOUT PADRÃO] ===
 app.post('/api/create-payment-preference', async (req, res) => {
   try {
     const { amount, description, user_id } = req.body;
@@ -56,6 +56,11 @@ app.post('/api/create-payment-preference', async (req, res) => {
         }
       ],
       external_reference: user_id,
+      // Garante que Pix estará disponível (mas depende da conta MP)
+      payment_methods: {
+        excluded_payment_types: [],
+        installments: 1,
+      }
     };
 
     const result = await preference.create({ body: preferenceData });
@@ -63,6 +68,38 @@ app.post('/api/create-payment-preference', async (req, res) => {
   } catch (error) {
     console.error('[ERROR] MercadoPago:', error);
     res.status(500).json({ error: 'Erro ao criar preferência de pagamento', details: error.message || error });
+  }
+});
+
+// === [ROTA DE PAGAMENTO PIX DIRETO] ===
+app.post('/pagamento', async (req, res) => {
+  try {
+    const { amount, email } = req.body;
+    if (!amount || !email) {
+      return res.status(400).json({ error: 'amount e email são obrigatórios' });
+    }
+
+    const paymentData = {
+      transaction_amount: Number(amount),
+      description: 'Depósito via Pix',
+      payment_method_id: 'pix',
+      payer: {
+        email: email,
+        first_name: 'Cliente', // Opcional
+      }
+    };
+
+    const mpClient = new mercadopago.MercadoPagoConfig({
+      accessToken: process.env.MP_ACCESS_TOKEN,
+    });
+    const payment = new mercadopago.Payment(mpClient);
+
+    const result = await payment.create({ body: paymentData });
+
+    res.json(result);
+  } catch (error) {
+    console.error('[ERROR] Pix:', error);
+    res.status(500).json({ error: 'Erro ao gerar pagamento Pix', details: error.message || error });
   }
 });
 

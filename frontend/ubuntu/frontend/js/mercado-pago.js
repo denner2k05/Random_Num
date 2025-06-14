@@ -17,7 +17,7 @@ class MercadoPagoPayments {
             const publicKey = window.mercadoPagoConfig?.publicKey;
             // Aceita qualquer chave não vazia (produção ou teste)
             if (publicKey && publicKey.trim() !== '') {
-                this.mp = new window.MercadoPago(publicKey); // Corrigido: window.MercadoPago
+                this.mp = new window.MercadoPago(publicKey);
                 this.initialized = true;
                 console.log('Mercado Pago inicializado com sucesso');
             } else {
@@ -85,9 +85,9 @@ class MercadoPagoPayments {
             }
             // Exiba o QR Code Pix (campo qr_code_base64)
             const qrBase64 = data.point_of_interaction?.transaction_data?.qr_code_base64;
-            if (qrBase64) {
-                // Crie um modal ou popup com a imagem do QR code
-                this.showPixQrModal(qrBase64, data.point_of_interaction.transaction_data.qr_code);
+            const qrCodePix = data.point_of_interaction?.transaction_data?.qr_code;
+            if (qrBase64 || qrCodePix) {
+                this.showPixQrModal(qrBase64, qrCodePix);
             } else {
                 alert('Pagamento criado, mas sem QR Code.');
             }
@@ -97,12 +97,14 @@ class MercadoPagoPayments {
         }
     }
 
-    // Exibe modal com QR Code Pix
+    // Exibe modal com QR Code Pix e botão para copiar a chave Pix (copia e cola)
     showPixQrModal(qrBase64, qrCodeText) {
         // Garanta que existe um modal com id 'pix-qr-modal' e img 'pix-qr-img' no seu HTML!
         let modal = document.getElementById('pix-qr-modal');
         let img = document.getElementById('pix-qr-img');
         let codeText = document.getElementById('pix-qr-code-text');
+        let copyBtn = document.getElementById('pix-copy-btn');
+        let copyMsg = document.getElementById('pix-copy-msg');
         if (!modal) {
             modal = document.createElement('div');
             modal.id = 'pix-qr-modal';
@@ -112,8 +114,15 @@ class MercadoPagoPayments {
             img.style = 'max-width:350px;max-height:350px;display:block;margin:0 auto 15px auto;';
             codeText = document.createElement('textarea');
             codeText.id = 'pix-qr-code-text';
-            codeText.style = 'width:100%;height:60px;display:block;margin:0 auto 10px auto;';
+            codeText.style = 'width:100%;height:60px;display:block;margin:0 auto 10px auto;font-size:16px;resize:none;';
             codeText.readOnly = true;
+            copyBtn = document.createElement('button');
+            copyBtn.id = 'pix-copy-btn';
+            copyBtn.textContent = 'Copiar chave Pix';
+            copyBtn.style = 'display:block;margin:0 auto 10px auto;font-size:16px;padding:8px 16px;cursor:pointer;';
+            copyMsg = document.createElement('span');
+            copyMsg.id = 'pix-copy-msg';
+            copyMsg.style = 'display:block;margin:0 auto 10px auto;color:green;font-weight:bold;';
             const closeBtn = document.createElement('button');
             closeBtn.textContent = 'Fechar';
             closeBtn.onclick = () => modal.style.display = 'none';
@@ -122,13 +131,32 @@ class MercadoPagoPayments {
             inner.style = 'background:#fff;padding:20px;border-radius:6px;text-align:center;max-width:400px;width:90vw;';
             inner.appendChild(img);
             inner.appendChild(codeText);
+            inner.appendChild(copyBtn);
+            inner.appendChild(copyMsg);
             inner.appendChild(closeBtn);
             modal.appendChild(inner);
             document.body.appendChild(modal);
+
+            // Evento de copiar chave Pix
+            copyBtn.onclick = async () => {
+                try {
+                    await navigator.clipboard.writeText(codeText.value);
+                    copyMsg.textContent = 'Chave Pix copiada!';
+                    setTimeout(() => {
+                        copyMsg.textContent = '';
+                    }, 2000);
+                } catch (err) {
+                    copyMsg.textContent = 'Erro ao copiar!';
+                    setTimeout(() => {
+                        copyMsg.textContent = '';
+                    }, 2000);
+                }
+            };
         }
         img.src = 'data:image/png;base64,' + qrBase64;
         codeText.value = qrCodeText || '';
         modal.style.display = 'flex';
+        if (copyMsg) copyMsg.textContent = '';
     }
 
     // Obter ID do usuário atual (Supabase)
