@@ -20,9 +20,9 @@ process.on('uncaughtException', (err) => {
 
 const app = express();
 
-// === CORS CORRIGIDO ===
+// CORS
 app.use(cors({
-  origin: 'https://numero-randomico.netlify.app', // ALTERA para o domínio real do seu front
+  origin: 'https://numero-randomico.netlify.app', // Troque para o domínio real do seu front
   methods: ['GET', 'POST', 'OPTIONS'],
   credentials: true
 }));
@@ -30,14 +30,15 @@ app.use(cors({
 app.use(express.json());
 
 // DEBUG vars de ambiente
+console.log('[DEBUG] MP_ACCESS_TOKEN:', !!process.env.MP_ACCESS_TOKEN);
 console.log('[DEBUG] MAIL_USER:', process.env.MAIL_USER);
 console.log('[DEBUG] MAIL_PASS:', process.env.MAIL_PASS ? '****' : 'NÃO DEFINIDA');
 
 // Inicialize Mercado Pago
-const client = new mercadopago.MercadoPagoConfig({
+const mpClient = new mercadopago.MercadoPagoConfig({
   accessToken: process.env.MP_ACCESS_TOKEN,
 });
-const preference = new mercadopago.Preference(client);
+const preference = new mercadopago.Preference(mpClient);
 
 // === [ROTA DE PAGAMENTO - CHECKOUT PADRÃO] ===
 app.post('/api/create-payment-preference', async (req, res) => {
@@ -56,7 +57,6 @@ app.post('/api/create-payment-preference', async (req, res) => {
         }
       ],
       external_reference: user_id,
-      // Garante que Pix estará disponível (mas depende da conta MP)
       payment_methods: {
         excluded_payment_types: [],
         installments: 1,
@@ -85,19 +85,38 @@ app.post('/pagamento', async (req, res) => {
       payment_method_id: 'pix',
       payer: {
         email: email,
-        first_name: 'Cliente', // Opcional
+        first_name: 'Cliente',
       }
     };
 
-    const mpClient = new mercadopago.MercadoPagoConfig({
-      accessToken: process.env.MP_ACCESS_TOKEN,
-    });
     const payment = new mercadopago.Payment(mpClient);
 
     const result = await payment.create({ body: paymentData });
 
-    res.json(result);
+    // Retornar apenas os dados relevantes para o frontend
+    if (
+      result &&
+      result.point_of_interaction &&
+      result.point_of_interaction.transaction_data &&
+      result.point_of_interaction.transaction_data.qr_code_base64
+    ) {
+      res.json({
+        id: result.id,
+        status: result.status,
+        point_of_interaction: result.point_of_interaction
+      });
+    } else {
+      // Se não veio o QR, loga tudo para debug
+      console.error('[ERROR] Resposta inesperada do Mercado Pago:', JSON.stringify(result, null, 2));
+      res.status(500).json({ error: 'Erro ao gerar pagamento Pix', details: 'Resposta inesperada do Mercado Pago', full: result });
+    }
   } catch (error) {
+    // Mostra erro detalhado do Mercado Pago (se houver)
+    if (error.cause && Array.isArray(error.cause)) {
+      error.cause.forEach((e, i) => {
+        console.error(`[ERROR] Pix Cause ${i}:`, e);
+      });
+    }
     console.error('[ERROR] Pix:', error);
     res.status(500).json({ error: 'Erro ao gerar pagamento Pix', details: error.message || error });
   }
@@ -117,8 +136,6 @@ app.post('/api/solicitar-saque', async (req, res) => {
   console.log('🟢 Recebido POST em /api/solicitar-saque!!!');
   const { valor, metodo, pixKeyType, pixKey, bankName, accountNumber, branchNumber, usuario, user_id } = req.body;
 
-  console.log('user_id recebido:', user_id, '| valor:', valor);
-
   if (!user_id || typeof valor !== 'number' || valor <= 0) {
     return res.status(400).json({ error: 'Dados inválidos para saque.' });
   }
@@ -131,9 +148,6 @@ app.post('/api/solicitar-saque', async (req, res) => {
       .eq('id', user_id)
       .single();
 
-    console.log('profile retornado do Supabase:', profile);
-    console.log('profileError:', profileError);
-
     if (profileError || !profile) {
       return res.status(404).json({ error: 'Usuário não encontrado.' });
     }
@@ -145,14 +159,11 @@ app.post('/api/solicitar-saque', async (req, res) => {
 
     // 2. Descontar valor
     const novoSaldo = saldoAtual - valor;
-    console.log('Descontando valor. Saldo atual:', saldoAtual, '| Valor:', valor, '| Novo saldo:', novoSaldo);
 
     const { error: updateError } = await supabase
       .from('profiles')
       .update({ balance: novoSaldo })
       .eq('id', user_id);
-
-    console.log('updateError:', updateError);
 
     if (updateError) {
       return res.status(500).json({ error: 'Erro ao atualizar saldo.' });
