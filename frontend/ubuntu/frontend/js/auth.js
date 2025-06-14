@@ -167,7 +167,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 id: user.id,
                 email: user.email,
                 name: user.user_metadata?.name || '',
-                balance: 100.00
+                balance: 0
             }]);
 
         if (error) {

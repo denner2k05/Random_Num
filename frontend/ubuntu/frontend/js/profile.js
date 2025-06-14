@@ -351,7 +351,7 @@ document.getElementById('withdrawal-form').addEventListener('submit', async func
         return;
     }
 
-    fetch('https://random-num.onrender.com', {
+    fetch('https://random-num.onrender.com/api/solicitar-saque', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

@@ -190,8 +190,8 @@ document.addEventListener('DOMContentLoaded', function() {
         remainingChances = currentChances;
         currentBetAmount = betAmount;
 
-        // Descontar o valor da aposta do saldo correto
-        await updateUserBalance(-betAmount);
+        // NO LONGER DEDUCTING BALANCE HERE
+        // await updateUserBalance(-betAmount);
 
         // Atualizar a interface
         chancesInfo.textContent = `Chances restantes: ${remainingChances}`;
@@ -252,7 +252,9 @@ document.addEventListener('DOMContentLoaded', function() {
         let resultAmount = 0;
         if (isWin) {
             resultAmount = currentBetAmount * currentMultiplier;
-            await updateUserBalance(resultAmount);
+            await updateUserBalance(resultAmount); // Add full prize if won
+        } else {
+            await updateUserBalance(-currentBetAmount); // Deduct bet amount only if lost
         }
 
         // Salvar aposta no banco de dados
@@ -408,7 +410,6 @@ document.addEventListener('DOMContentLoaded', function() {
                         ${bet.is_win ? '+' : '-'}R$ ${bet.is_win ? bet.result_amount.toFixed(2) : bet.bet_amount.toFixed(2)}
                     </td>
                 `;
-
                 recentBetsBody.appendChild(row);
             });
 
