@@ -69,14 +69,19 @@ class MercadoPagoPayments {
     }
 
     // Pagamento Pix direto via API Node/Express
-    async processPixPayment(amount, email) {
+    async processPixPayment(amount, email, user_id) {
+        // Agora exige os 3 argumentos obrigatórios!
+        if (!amount || !email || !user_id) {
+            throw new Error("amount, email e user_id são obrigatórios");
+        }
         try {
             const response = await fetch(`${BACKEND_URL}/pagamento`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     amount: amount,
-                    email: email
+                    email: email,
+                    user_id: user_id
                 })
             });
             const data = await response.json();
