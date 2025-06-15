@@ -47,6 +47,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         currentUser = user;
+        window.currentUser = user; // Disponível globalmente para PIX
 
         // Carregar dados do usuário: ambos os saldos
         await loadUserData();
@@ -464,7 +465,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         // Checa se o usuário está logado (caso precise do email para Pix)
-        if ((paymentMethod === 'pix') && (!window.currentUser || !window.currentUser.email)) {
+        if ((paymentMethod === 'pix') && (!currentUser || !currentUser.email)) {
             alert('Usuário não autenticado ou e-mail não disponível!');
             return;
         }
@@ -476,7 +477,8 @@ document.addEventListener('DOMContentLoaded', function() {
             if (paymentMethod === 'mercado-pago') {
                 await window.mercadoPagoPayments.processPayment(depositAmount);
             } else if (paymentMethod === 'pix') {
-                await window.mercadoPagoPayments.processPixPayment(depositAmount, window.currentUser.email);
+                // Chama o Pix do Mercado Pago (universal, qualquer banco)
+                await window.mercadoPagoPayments.processPixPayment(depositAmount, currentUser.email);
             } else {
                 await simulateDeposit(depositAmount, paymentMethod);
             }

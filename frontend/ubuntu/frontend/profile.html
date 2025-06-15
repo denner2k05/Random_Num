@@ -179,15 +179,13 @@
                     <div class="form-group">
                         <label>Método de Pagamento</label>
                         <div class="payment-methods">
-                            
-                            <div class="payment-method">
-                                <input type="radio" id="credit-card" name="payment-method" value="credit-card">
-                                <label for="credit-card">Cartão de Crédito - (DEMO)</label>
-                            </div>
-                            <!-- Adicionado Mercado Pago -->
                             <div class="payment-method">
                                 <input type="radio" id="mercado-pago" name="payment-method" value="mercado-pago">
                                 <label for="mercado-pago">Mercado Pago</label>
+                            </div>
+                            <div class="payment-method">
+                                <input type="radio" id="pix" name="payment-method" value="pix">
+                                <label for="pix">Pix (Mercado Pago)</label>
                             </div>
                         </div>
                     </div>
@@ -195,7 +193,7 @@
                 </form>
             </div>
         </div>
-
+        
         <!-- Modal de Alteração de Senha -->
         <div class="modal" id="change-password-modal">
             <div class="modal-content">
@@ -235,7 +233,7 @@
     </script>
     <script>
         window.mercadoPagoConfig = {
-            publicKey: 'TEST-c79e0212-c0fa-44ec-ae51-c538805df9a4'
+            publicKey: 'APP_USR-5464204224443495-061015-6433f7421506cdae936a004ad9e100bb-400749671'
         };
     </script>
     <script src="js/mercado-pago.js"></script>

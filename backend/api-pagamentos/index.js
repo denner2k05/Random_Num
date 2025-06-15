@@ -74,9 +74,9 @@ app.post('/api/create-payment-preference', async (req, res) => {
 // === [ROTA DE PAGAMENTO PIX DIRETO] ===
 app.post('/pagamento', async (req, res) => {
   try {
-    const { amount, email } = req.body;
-    if (!amount || !email) {
-      return res.status(400).json({ error: 'amount e email são obrigatórios' });
+    const { amount, email, user_id } = req.body; // user_id agora é obrigatório!
+    if (!amount || !email || !user_id) {
+      return res.status(400).json({ error: 'amount, email e user_id são obrigatórios' });
     }
 
     const paymentData = {
@@ -86,7 +86,8 @@ app.post('/pagamento', async (req, res) => {
       payer: {
         email: email,
         first_name: 'Cliente',
-      }
+      },
+      external_reference: user_id // IMPORTANTÍSSIMO para creditar saldo depois!
     };
 
     const payment = new mercadopago.Payment(mpClient);
@@ -119,6 +120,67 @@ app.post('/pagamento', async (req, res) => {
     }
     console.error('[ERROR] Pix:', error);
     res.status(500).json({ error: 'Erro ao gerar pagamento Pix', details: error.message || error });
+  }
+});
+
+// === [WEBHOOK MERCADO PAGO] ===
+app.post('/webhook-mercadopago', async (req, res) => {
+  try {
+    // Mercado Pago pode enviar tanto application/json quanto x-www-form-urlencoded
+    let body = req.body;
+    // Render/Express pode não parsear corretamente body se o header não for JSON, então garanta isso em produção!
+    // Para pagamentos: virá { "type": "payment", "data": { "id": ... } }
+    if (body && body.type === "payment" && body.data && body.data.id) {
+      const payment = new mercadopago.Payment(mpClient);
+      const result = await payment.get({ id: body.data.id });
+
+      // Só credita se aprovado!
+      if (result.status === 'approved') {
+        const userId = result.external_reference;
+        const valor = result.transaction_amount;
+
+        if (!userId) {
+          console.error('[WEBHOOK] Sem external_reference, impossível creditar saldo.');
+        } else {
+          // Atualiza saldo (credita)
+          const { data: profile, error: profileError } = await supabase
+            .from('profiles')
+            .select('balance')
+            .eq('id', userId)
+            .single();
+
+          if (profileError || !profile) {
+            console.error('[WEBHOOK] Usuário não encontrado:', userId);
+          } else {
+            const novoSaldo = parseFloat(profile.balance) + valor;
+            const { error: updateError } = await supabase
+              .from('profiles')
+              .update({ balance: novoSaldo })
+              .eq('id', userId);
+
+            if (updateError) {
+              console.error('[WEBHOOK] Erro ao atualizar saldo:', updateError);
+            } else {
+              // Registra a transação como "completed"
+              await supabase
+                .from('transactions')
+                .insert([{
+                  user_id: userId,
+                  type: 'deposit',
+                  amount: valor,
+                  payment_method: 'pix',
+                  status: 'completed'
+                }]);
+              console.log(`[WEBHOOK] Saldo creditado para o usuário ${userId}: +R$${valor}`);
+            }
+          }
+        }
+      }
+    }
+    res.sendStatus(200);
+  } catch (error) {
+    console.error('[WEBHOOK] Erro:', error);
+    res.sendStatus(500);
   }
 });
 

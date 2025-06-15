@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -8,6 +9,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
+
 <body>
     <div class="container">
         <header>
@@ -21,9 +23,7 @@
             </nav>
             <div class="user-balance" style="margin-top: 10px;">
                 <label><input type="radio" name="bet-mode" value="real" checked> Saldo Real</label>
-                <label style="margin-left: 12px;"><input type="radio" name="bet-mode" value="demo"> Saldo Demo</label>
                 <span id="user-balance" style="font-weight:bold; margin-left:16px;">R$ 0,00</span>
-                <span id="user-balance-demo" style="margin-left:12px; color:#888;">(Demo: R$ 0,00)</span>
                 <button class="btn btn-small" id="deposit-btn" style="margin-left:16px;">Depositar</button>
             </div>
         </header>
@@ -34,25 +34,29 @@
                     <h2>Adivinhe o Número</h2>
                     <p>Escolha uma faixa, digite um número e faça sua aposta!</p>
                 </div>
-                
+
                 <div class="game-options">
                     <div class="range-selector">
                         <h3>Escolha a Faixa</h3>
                         <div class="range-buttons">
-                            <button class="range-btn" data-range="10" data-multiplier="1.2" data-chances="3">1-10 (1.2x)</button>
-                            <button class="range-btn" data-range="50" data-multiplier="2" data-chances="5">1-50 (2x)</button>
-                            <button class="range-btn" data-range="100" data-multiplier="2.5" data-chances="5">1-100 (2.5x)</button>
-                            <button class="range-btn" data-range="300" data-multiplier="5" data-chances="6">1-300 (5x)</button>
+                            <button class="range-btn" data-range="10" data-multiplier="1.2" data-chances="3">1-10
+                                (1.2x)</button>
+                            <button class="range-btn" data-range="50" data-multiplier="2" data-chances="5">1-50
+                                (2x)</button>
+                            <button class="range-btn" data-range="100" data-multiplier="2.5" data-chances="5">1-100
+                                (2.5x)</button>
+                            <button class="range-btn" data-range="300" data-multiplier="5" data-chances="6">1-300
+                                (5x)</button>
                         </div>
                     </div>
-                    
+
                     <div class="number-input">
                         <h3>Escolha seu Número</h3>
                         <input type="number" id="guess-number" min="1" max="10" placeholder="Digite um número">
                         <p id="range-info">Faixa atual: 1-10</p>
                         <p id="chances-info">Chances restantes: 3</p>
                     </div>
-                    
+
                     <div class="bet-input">
                         <h3>Valor da Aposta</h3>
                         <div class="bet-amount-container">
@@ -67,18 +71,18 @@
                         </div>
                     </div>
                 </div>
-                
+
                 <button id="place-bet-btn" class="btn btn-primary btn-large">Apostar</button>
-                
+
                 <div class="game-result" id="game-result">
                     <!-- Resultados serão exibidos aqui via JavaScript -->
                 </div>
-                
+
                 <div class="game-hint" id="game-hint">
                     <!-- Dicas serão exibidas aqui via JavaScript -->
                 </div>
             </section>
-            
+
             <section class="recent-bets">
                 <h3>Apostas Recentes</h3>
                 <div class="bets-table-container">
@@ -115,14 +119,13 @@
                     <div class="form-group">
                         <label>Método de Pagamento</label>
                         <div class="payment-methods">
-                            
-                            <div class="payment-method">
-                                <input type="radio" id="credit-card" name="payment-method" value="credit-card">
-                                <label for="credit-card">Cartão de Crédito (DEMO)</label>
-                            </div>
                             <div class="payment-method">
                                 <input type="radio" id="mercado-pago" name="payment-method" value="mercado-pago">
                                 <label for="mercado-pago">Mercado Pago</label>
+                            </div>
+                            <div class="payment-method">
+                                <input type="radio" id="pix" name="payment-method" value="pix">
+                                <label for="pix">Pix (Mercado Pago)</label>
                             </div>
                         </div>
                     </div>
@@ -136,14 +139,15 @@
         </footer>
     </div>
     <script>
-    window.mercadoPagoConfig = {
-        publicKey: 'TEST-c79e0212-c0fa-44ec-ae51-c538805df9a4'
-    };
-    console.log('MercadoPagoConfig:', window.mercadoPagoConfig);
-</script>
-<script src="js/mercado-pago.js"></script>
-<script src="js/game.js"></script>
-<script src="js/supabase-config.js"></script>
-<script src="js/auth.js"></script>
+        window.mercadoPagoConfig = {
+            publicKey: 'TEST-c79e0212-c0fa-44ec-ae51-c538805df9a4'
+        };
+        console.log('MercadoPagoConfig:', window.mercadoPagoConfig);
+    </script>
+    <script src="js/mercado-pago.js"></script>
+    <script src="js/game.js"></script>
+    <script src="js/supabase-config.js"></script>
+    <script src="js/auth.js"></script>
 </body>
+
 </html>
