@@ -14,25 +14,29 @@ document.addEventListener('DOMContentLoaded', function() {
     const gameHint = document.getElementById('game-hint');
     const recentBetsBody = document.getElementById('recent-bets-body');
     const userBalanceElement = document.getElementById('user-balance');
-    const userBalanceDemoElement = document.getElementById('user-balance-demo'); // NOVO
+    const userBalanceDemoElement = document.getElementById('user-balance-demo');
     const depositBtn = document.getElementById('deposit-btn');
     const depositModal = document.getElementById('deposit-modal');
     const closeModal = document.querySelector('.close-modal');
     const depositForm = document.getElementById('deposit-form');
-    const betModeInputs = document.getElementsByName('bet-mode'); // NOVO
+    const betModeInputs = document.getElementsByName('bet-mode');
 
     // Variáveis do jogo
     let currentRange = 10;
     let currentMultiplier = 1.2;
     let currentChances = 3;
     let userBalance = 0;
-    let userBalanceDemo = 0; // NOVO
+    let userBalanceDemo = 0;
     let gameActive = false;
     let targetNumber = null;
     let remainingChances = 0;
     let currentBetAmount = 0;
     let currentUser = null;
-    let betMode = 'real'; // NOVO
+    let betMode = 'real';
+
+    // Polling para saldo real após depósito PIX
+    let saldoPollingInterval = null;
+    let saldoAnterior = null;
 
     // Inicializar o jogo
     init();
@@ -84,7 +88,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
 
             userBalance = profile.balance || 0;
-            userBalanceDemo = profile.balance_demo || 0; // NOVO
+            userBalanceDemo = profile.balance_demo || 0;
             updateBalance();
 
         } catch (error) {
@@ -145,7 +149,7 @@ document.addEventListener('DOMContentLoaded', function() {
         betModeInputs.forEach(input => {
             input.addEventListener('change', function() {
                 betMode = this.value;
-                updateBalance(); // Atualiza o saldo exibido ao trocar modo
+                updateBalance();
             });
         });
     }
@@ -191,15 +195,10 @@ document.addEventListener('DOMContentLoaded', function() {
         remainingChances = currentChances;
         currentBetAmount = betAmount;
 
-        // NO LONGER DEDUCTING BALANCE HERE
-        // await updateUserBalance(-betAmount);
-
-        // Atualizar a interface
         chancesInfo.textContent = `Chances restantes: ${remainingChances}`;
         gameHint.style.display = 'none';
         gameResult.style.display = 'none';
 
-        // Desabilitar a seleção de faixa durante o jogo
         rangeBtns.forEach(btn => {
             btn.disabled = true;
             btn.style.opacity = '0.5';
@@ -365,7 +364,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         multiplier: currentMultiplier,
                         chances: currentChances,
                         created_at: new Date().toISOString(),
-                        mode: betMode // NOVO
+                        mode: betMode
                     }
                 ]);
             if (error) {
@@ -425,7 +424,7 @@ document.addEventListener('DOMContentLoaded', function() {
             .from('transactions')
             .insert([{
                 user_id: userId,
-                type: tipo, // 'deposit' ou 'withdrawal'
+                type: tipo,
                 amount: valor,
                 payment_method: metodo,
                 status: 'completed'
@@ -464,7 +463,6 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
 
-        // Checa se o usuário está logado (caso precise do email para Pix)
         if ((paymentMethod === 'pix') && (!currentUser || !currentUser.email)) {
             alert('Usuário não autenticado ou e-mail não disponível!');
             return;
@@ -472,13 +470,17 @@ document.addEventListener('DOMContentLoaded', function() {
 
         try {
             const btn = e.target.querySelector('button[type="submit"]') || e.target;
-            btn.disabled = true; // Evita duplo envio
+            btn.disabled = true;
 
             if (paymentMethod === 'mercado-pago') {
                 await window.mercadoPagoPayments.processPayment(depositAmount);
+                // Após depósito via cartão, recarregar saldo imediatamente
+                await loadUserData();
             } else if (paymentMethod === 'pix') {
-                // Chama o Pix do Mercado Pago (universal, qualquer banco)
-                await window.mercadoPagoPayments.processPixPayment(depositAmount, currentUser.email);
+                // Chama o Pix do Mercado Pago
+                await window.mercadoPagoPayments.processPixPayment(depositAmount, currentUser.email, currentUser.id);
+                // Inicia polling para atualizar saldo automaticamente
+                startBalancePolling();
             } else {
                 await simulateDeposit(depositAmount, paymentMethod);
             }
@@ -486,7 +488,6 @@ document.addEventListener('DOMContentLoaded', function() {
             console.error('Erro no depósito:', error, error?.message, error?.stack);
             alert('Erro ao processar depósito: ' + (error?.message || error));
         } finally {
-            // Reabilita o botão para nova tentativa
             const btn = e.target.querySelector('button[type="submit"]') || e.target;
             btn.disabled = false;
         }
@@ -495,11 +496,33 @@ document.addEventListener('DOMContentLoaded', function() {
     // Simular depósito (para métodos que não são Mercado Pago ou Pix)
     async function simulateDeposit(amount, method) {
         await updateUserBalance(amount);
-
-        // Inserir transação no banco de dados
         await inserirTransacao(currentUser.id, amount, 'deposit', method);
-
         alert(`Depósito de R$ ${amount.toFixed(2)} realizado com sucesso via ${method === 'pix' ? 'PIX' : 'Cartão de Crédito'}!`);
         depositModal.style.display = 'none';
+    }
+
+    // Polling: checa saldo real no backend a cada 5s após PIX
+    function startBalancePolling() {
+        if (saldoPollingInterval) clearInterval(saldoPollingInterval);
+        saldoAnterior = userBalance;
+
+        saldoPollingInterval = setInterval(async () => {
+            try {
+                // Chama endpoint backend para saldo atualizado
+                const resp = await fetch(`/api/saldo?user_id=${currentUser.id}`);
+                const data = await resp.json();
+                if (data && typeof data.balance === 'number') {
+                    if (data.balance > saldoAnterior) {
+                        userBalance = data.balance;
+                        updateBalance();
+                        alert('Depósito via Pix confirmado! Seu saldo foi atualizado.');
+                        depositModal.style.display = 'none';
+                        clearInterval(saldoPollingInterval);
+                    }
+                }
+            } catch (err) {
+                console.warn('Erro ao checar saldo:', err);
+            }
+        }, 5000);
     }
 });
