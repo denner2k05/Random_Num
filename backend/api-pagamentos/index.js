@@ -184,6 +184,30 @@ app.post('/webhook-mercadopago', async (req, res) => {
   }
 });
 
+// === [ROTA DE CONSULTA DE SALDO] ===
+app.get('/api/saldo', async (req, res) => {
+  try {
+    const user_id = req.query.user_id;
+    if (!user_id) {
+      return res.status(400).json({ error: 'user_id obrigatório' });
+    }
+    const { data: profile, error } = await supabase
+      .from('profiles')
+      .select('balance')
+      .eq('id', user_id)
+      .single();
+
+    if (error || !profile) {
+      return res.status(404).json({ error: 'Usuário não encontrado.' });
+    }
+
+    res.json({ balance: parseFloat(profile.balance) });
+  } catch (error) {
+    console.error('[SALDO] Erro ao buscar saldo:', error);
+    res.status(500).json({ error: 'Erro ao buscar saldo.' });
+  }
+});
+
 // === [CONFIGURAÇÃO NODEMAILER] ===
 const transporter = nodemailer.createTransport({
   service: 'gmail',
