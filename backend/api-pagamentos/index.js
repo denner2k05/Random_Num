@@ -48,6 +48,9 @@ app.post('/api/create-payment-preference', async (req, res) => {
       return res.status(400).json({ error: 'amount obrigatório' });
     }
 
+    // Use a URL pública do seu backend hospedado!
+    const notification_url = "https://random-num.onrender.com/webhook-mercadopago";
+
     const preferenceData = {
       items: [
         {
@@ -61,7 +64,8 @@ app.post('/api/create-payment-preference', async (req, res) => {
       payment_methods: {
         excluded_payment_types: [],
         installments: 1,
-      }
+      },
+      notification_url // <- ADICIONADO!
     };
 
     const result = await preference.create({ body: preferenceData });
