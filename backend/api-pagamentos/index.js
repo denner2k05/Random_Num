@@ -54,6 +54,7 @@ app.post('/api/create-payment-preference', async (req, res) => {
           title: description || 'Depósito',
           unit_price: Number(amount),
           quantity: 1,
+          currency_id: "BRL" // <-- OBRIGATÓRIO PARA EVITAR ERRO 400!
         }
       ],
       external_reference: user_id,
