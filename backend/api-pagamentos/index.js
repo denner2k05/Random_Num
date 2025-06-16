@@ -64,7 +64,9 @@ app.post('/api/create-payment-preference', async (req, res) => {
     };
 
     const result = await preference.create({ body: preferenceData });
-    res.json({ preference_id: result.id });
+    console.log('[DEBUG] MercadoPago preference.create result:', result);
+    // AQUI ESTÁ A CORREÇÃO: preference_id vem de result.body.id
+    res.json({ preference_id: result.body.id });
   } catch (error) {
     console.error('[ERROR] MercadoPago:', error);
     res.status(500).json({ error: 'Erro ao criar preferência de pagamento', details: error.message || error });
